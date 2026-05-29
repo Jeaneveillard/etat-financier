@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="fr-CA">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#0d4a32" />
+  <meta name="description" content="Manoue Bar — repas du dimanche, boissons (Haïti)" />
+  <title>Manoue Bar — État financier</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;600&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header__top">
+      <div class="app-header__brand">
+        <h1 id="app-brand-name">Manoue Bar</h1>
+        <small>Repas chaque dimanche — Soupe giromon (Soup jounou) · boissons</small>
+      </div>
+      <div class="kpis">
+        <div class="kpi">
+          <div class="kpi__label">Solde cumulé</div>
+          <div class="kpi__value" id="kpi-balance">0,00 $</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi__label">Net ce mois</div>
+          <div class="kpi__value" id="kpi-month-net">0,00 $</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi__label">Rentrées (mois)</div>
+          <div class="kpi__value" id="kpi-month-in">0,00 $</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi__label">Sorties (mois)</div>
+          <div class="kpi__value" id="kpi-month-out">0,00 $</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi__label">Paie nette (mois)</div>
+          <div class="kpi__value" id="kpi-payroll-net">0,00 $</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="Sections">
+    <button type="button" class="tab is-active" data-panel="tableau">Tableau de bord</button>
+    <button type="button" class="tab" data-panel="operations">Opérations</button>
+    <button type="button" class="tab" data-panel="recu">Reçus / Ventes</button>
+    <button type="button" class="tab" data-panel="pret">Clients en prêt</button>
+    <button type="button" class="tab" data-panel="stock">Produits / Stock</button>
+    <button type="button" class="tab" data-panel="paie">Paie</button>
+    <button type="button" class="tab" data-panel="rapports">Rapports</button>
+    <button type="button" class="tab" data-panel="parametres">Paramètres</button>
+    <button type="button" class="tab tab--help" data-panel="aide">Aide</button>
+  </nav>
+
+  <main>
+    <section id="panel-tableau" class="panel is-active">
+      <div class="card">
+        <h2 class="card__title">Alertes — prévenir les erreurs</h2>
+        <p class="hint">Le système bloque les sorties qui rendraient le solde négatif et signale les doublons ou écarts stock/finances.</p>
+        <ul class="validation-list" id="alerts-list"></ul>
+      </div>
+      <div class="card">
+        <h2 class="card__title">Recommandations &amp; marché</h2>
+        <div id="insights-list"></div>
+      </div>
+    </section>
+
+    <section id="panel-operations" class="panel">
+      <div class="grid-2">
+        <div class="card">
+          <h2 class="card__title" id="tx-form-title">Nouvelle opération</h2>
+          <div id="tx-validation"></div>
+          <form id="form-tx">
+            <div class="field-row">
+              <div>
+                <label for="tx-type">Type</label>
+                <select id="tx-type" required>
+                  <option value="rentree">Rentrée</option>
+                  <option value="sortie">Sortie</option>
+                </select>
+              </div>
+              <div>
+                <label for="tx-date">Date</label>
+                <input type="date" id="tx-date" required />
+              </div>
+              <div>
+                <label for="tx-amount">Montant ($)</label>
+                <input type="number" id="tx-amount" step="0.01" min="0" value="0" required />
+              </div>
+            </div>
+            <label for="tx-category">Catégorie</label>
+            <select id="tx-category" required></select>
+            <label for="tx-label">Libellé</label>
+            <input type="text" id="tx-label" required maxlength="120" placeholder="Ex. Vente matin, facture #1024" />
+            <label><input type="checkbox" id="tx-large-ok" /> Je confirme cette sortie importante (&gt; 5 000 $)</label>
+            <div class="btn-row">
+              <button type="submit" class="btn btn--primary" id="tx-submit-btn">Enregistrer</button>
+              <button type="button" class="btn btn--ghost" id="tx-cancel-edit" hidden>Annuler</button>
+            </div>
+          </form>
+        </div>
+        <div class="card">
+          <h2 class="card__title">Plan rapide — éviter les résultats négatifs</h2>
+          <ol>
+            <li>Saisir chaque rentrée et sortie le jour même.</li>
+            <li>Vérifier les alertes avant de fermer la journée.</li>
+            <li>Exporter le rapport journalier en fin de journée.</li>
+            <li>Comparer le net mensuel à la paie.</li>
+            <li>Consulter les recommandations chaque semaine.</li>
+          </ol>
+        </div>
+      </div>
+      <div class="card">
+        <h2 class="card__title">Journal des opérations</h2>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Type</th>
+              <th>Catégorie</th>
+              <th>Libellé</th>
+              <th>Montant</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tx-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="panel-recu" class="panel">
+      <div class="card card--highlight">
+        <h2 class="card__title">Reçus de vente</h2>
+        <p class="hint"><strong>Gérez vos produits</strong> (ajouter, modifier, effacer) — chaque vente <strong>réduit le stock</strong> automatiquement.</p>
+        <p class="hint"><strong>N.B.</strong> Le reçu papier au client est <strong>optionnel</strong>. Il faut cliquer <strong>Payer</strong> pour enregistrer la vente (sortie stock + rentrée si cash). Le panier seul ne compte pas.</p>
+        <div class="btn-row">
+          <button type="button" class="btn btn--secondary" data-action="charger-demo" id="btn-charger-demo">Charger démo</button>
+        </div>
+        <div id="demo-status"></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h2 class="card__title" id="sale-form-title">Nouvelle facture / reçu</h2>
+          <div id="mov-validation"></div>
+
+          <h3 class="hint" style="margin-top:0">1. Ajouter des produits au panier</h3>
+
+          <div class="quick-product">
+            <h3 class="quick-product__title" id="sale-product-form-title">Gestion des produits</h3>
+            <p class="hint">Ajouter, modifier ou effacer un produit — la liste de vente se met à jour tout de suite.</p>
+            <div id="sale-product-validation"></div>
+            <form id="form-product-quick">
+              <div class="field-row">
+                <div>
+                  <label for="sale-product-name">Nom du produit</label>
+                  <input type="text" id="sale-product-name" required maxlength="80" placeholder="Ex. Prestige, Jus local" />
+                </div>
+                <div>
+                  <label for="sale-product-unit">Unité de vente</label>
+                  <select id="sale-product-unit" required></select>
+                </div>
+              </div>
+              <details class="product-advanced" id="sale-product-advanced">
+                <summary>Achat stock (caisse, sac, gallon…)</summary>
+                <label for="sale-product-purchase-unit">Unité d'achat fournisseur</label>
+                <select id="sale-product-purchase-unit"></select>
+                <div id="sale-product-pack-wrap">
+                  <label for="sale-product-units-per-purchase" id="sale-product-pack-label">Contenu par achat</label>
+                  <input type="number" id="sale-product-units-per-purchase" min="0" step="1" value="0" />
+                </div>
+              </details>
+              <div class="btn-row">
+                <button type="submit" class="btn btn--secondary" id="sale-product-submit-btn">Ajouter le produit</button>
+                <button type="button" class="btn btn--ghost" id="sale-product-cancel-edit" hidden>Annuler</button>
+              </div>
+            </form>
+            <table class="data-table data-table--compact" style="margin-top:1rem">
+              <thead>
+                <tr><th>Produit</th><th>Unités</th><th>Actions</th></tr>
+              </thead>
+              <tbody id="recu-products-body"></tbody>
+            </table>
+          </div>
+
+          <form id="form-cart-line">
+            <label for="mov-product">Produit</label>
+            <select id="mov-product" required></select>
+            <p class="hint" id="cart-stock-hint">Stock disponible : —</p>
+            <div class="field-row">
+              <div>
+                <label for="mov-qty" id="mov-qty-label">Quantité (bouteilles)</label>
+                <input type="number" id="mov-qty" step="0.01" min="0" value="0" required />
+              </div>
+              <div>
+                <label for="mov-unit-price">Prix unitaire ($)</label>
+                <input type="number" id="mov-unit-price" step="0.01" min="0" value="0" required />
+              </div>
+            </div>
+            <button type="submit" class="btn btn--secondary">+ Ajouter au panier</button>
+          </form>
+
+          <table class="data-table" style="margin-top:1rem">
+            <thead>
+              <tr><th>Produit</th><th>Qté</th><th>Prix</th><th>Total</th><th></th></tr>
+            </thead>
+            <tbody id="cart-table-body"></tbody>
+          </table>
+          <p class="hint" id="cart-total-preview"><strong>Total panier :</strong> 0,00 $</p>
+
+          <h3 class="hint">2. Payer et enregistrer</h3>
+          <p class="hint">Imprimer un reçu : optionnel (case ci-dessous). Sans clic sur <strong>Payer</strong>, la vente n'est pas enregistrée.</p>
+          <label for="mov-date">Date de vente</label>
+          <input type="date" id="mov-date" required />
+          <label for="mov-seller">Nom du vendeur</label>
+          <input type="text" id="mov-seller" maxlength="80" />
+          <label for="mov-client">Nom de l'acheteur</label>
+          <input type="text" id="mov-client" maxlength="80" required />
+          <label for="mov-payment">Paiement</label>
+          <select id="mov-payment">
+            <option value="cash">Cash</option>
+            <option value="pret">Prêt (crédit)</option>
+          </select>
+          <label><input type="checkbox" id="mov-print-receipt" /> Imprimer le reçu au client (optionnel)</label>
+          <label for="mov-note">Note</label>
+          <input type="text" id="mov-note" maxlength="120" />
+          <div class="btn-row">
+            <button type="button" class="btn btn--primary" id="btn-finalize-sale">Payer</button>
+            <button type="button" class="btn btn--ghost" id="btn-clear-cart">Vider le panier</button>
+            <button type="button" class="btn btn--ghost" id="sale-cancel-edit" hidden>Annuler modification</button>
+          </div>
+        </div>
+        <div class="card">
+          <h2 class="card__title">Liste des reçus</h2>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>N° vente</th>
+                <th>Date</th>
+                <th>Vendeur</th>
+                <th>Acheteur</th>
+                <th>Paiement</th>
+                <th>Articles</th>
+                <th>Total</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="recu-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="panel-pret" class="panel">
+      <div class="card card--highlight">
+        <h2 class="card__title">Clients en prêt (crédit)</h2>
+        <p class="hint">Clients qui achètent <strong>en prêt</strong> et n'ont pas encore payé cash. Cliquez <strong>Encaisser</strong> quand ils remboursent — la rentrée d'argent est enregistrée à ce moment.</p>
+        <div class="tax-stats" id="pret-stats"></div>
+        <div id="pret-settle-status"></div>
+      </div>
+      <div class="card">
+        <h2 class="card__title">Sommaire par client</h2>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Client</th>
+              <th>Ventes en prêt</th>
+              <th>Total dû</th>
+            </tr>
+          </thead>
+          <tbody id="pret-clients-body"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h2 class="card__title">Ventes en attente de paiement</h2>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>N° vente</th>
+              <th>Date</th>
+              <th>Client</th>
+              <th>Articles</th>
+              <th>Montant</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="pret-open-body"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h2 class="card__title">Prêts déjà encaissés</h2>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>N° vente</th>
+              <th>Vente</th>
+              <th>Encaissé le</th>
+              <th>Client</th>
+              <th>Montant</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="pret-paid-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="panel-stock" class="panel">
+      <div id="catalog-purge-notice"></div>
+      <div class="card">
+        <h2 class="card__title">Inventaire — acheté, vendu, restant</h2>
+        <p class="hint">N.B. Connexion auto obligatoire : <strong>achat stock</strong> (ici) → sortie Opérations ; <strong>vente</strong> (Reçus) → rentrée + stock −. Pas de saisie manuelle des achats marchandise.</p>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Produit</th>
+              <th>Unités</th>
+              <th>Acheté</th>
+              <th>Vendu</th>
+              <th>Restant</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="stock-summary-body"></tbody>
+        </table>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h2 class="card__title" id="product-form-title">Nouveau produit</h2>
+          <p class="hint">Ajoutez un produit : choisissez l'<strong>unité de vente</strong> (Reçus) et l'<strong>unité d'achat</strong> (caisse, sac, gallon ou unité).</p>
+          <div id="product-validation"></div>
+          <form id="form-product">
+            <label for="product-name">Nom du produit</label>
+            <input type="text" id="product-name" required maxlength="80" placeholder="Ex. Riz, Glace, Bière locale" />
+            <label for="product-unit">Unité de vente (Reçus / Ventes)</label>
+            <select id="product-unit" required></select>
+            <label for="product-purchase-unit">Achat fournisseur</label>
+            <select id="product-purchase-unit" required></select>
+            <div id="product-pack-wrap">
+              <label for="product-units-per-purchase" id="product-pack-label">Contenu par achat</label>
+              <input type="number" id="product-units-per-purchase" min="0" step="1" value="0" />
+            </div>
+            <label for="product-min">Alerte stock bas (optionnel)</label>
+            <input type="number" id="product-min" min="0" step="1" value="0" />
+            <div class="btn-row">
+              <button type="submit" class="btn btn--primary" id="product-submit-btn">Ajouter le produit</button>
+              <button type="button" class="btn btn--ghost" id="product-cancel-edit" hidden>Annuler</button>
+            </div>
+          </form>
+        </div>
+        <div class="card">
+          <h2 class="card__title" id="achat-form-title">Entrée stock — achat fournisseur</h2>
+          <p class="hint">Chaque achat crée <strong>automatiquement</strong> une sortie dans Opérations (montant obligatoire). Modifiez ici pour mettre à jour stock et sortie ensemble.</p>
+          <div id="achat-validation"></div>
+          <form id="form-achat">
+            <label for="achat-product">Produit</label>
+            <select id="achat-product" required></select>
+            <p class="hint" id="achat-qty-hint">—</p>
+            <div class="field-row">
+              <div>
+                <label for="achat-qty" id="achat-qty-label">Quantité</label>
+                <input type="number" id="achat-qty" step="0.01" min="0" value="0" required />
+              </div>
+              <div>
+                <label for="achat-date">Date</label>
+                <input type="date" id="achat-date" required />
+              </div>
+            </div>
+            <label for="achat-note">Note (fournisseur)</label>
+            <input type="text" id="achat-note" maxlength="120" />
+            <label for="achat-amount">Montant payé (Gdes) — sortie auto obligatoire</label>
+            <input type="number" id="achat-amount" step="0.01" min="0" value="0" required />
+            <div class="btn-row">
+              <button type="submit" class="btn btn--primary" id="achat-submit-btn">Enregistrer l'achat (stock + sortie auto)</button>
+              <button type="button" class="btn btn--ghost" id="achat-cancel-edit" hidden>Annuler</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="card">
+          <h2 class="card__title">Produits achetés (détail)</h2>
+          <table class="data-table">
+            <thead>
+              <tr><th>Date</th><th>Produit</th><th>Achat</th><th>Note</th><th></th></tr>
+            </thead>
+            <tbody id="stock-buys-body"></tbody>
+          </table>
+      </div>
+    </section>
+
+    <section id="panel-paie" class="panel">
+      <div class="grid-2">
+        <div class="card">
+          <h2 class="card__title" id="emp-form-title">Ajouter un employé</h2>
+          <p class="hint">Cliquez <strong>Modif.</strong> dans le tableau pour corriger un employé.</p>
+          <div id="emp-validation"></div>
+          <form id="form-employee">
+            <label for="emp-name">Nom</label>
+            <input type="text" id="emp-name" required />
+            <label for="emp-role">Rôle</label>
+            <input type="text" id="emp-role" placeholder="Ex. Vendeur, technicien" />
+            <label for="emp-gross">Salaire brut mensuel ($)</label>
+            <input type="number" id="emp-gross" step="0.01" min="0" value="0" required />
+            <div class="btn-row">
+              <button type="submit" class="btn btn--primary" id="emp-submit-btn">Ajouter</button>
+              <button type="button" class="btn btn--ghost" id="emp-cancel-edit" hidden>Annuler</button>
+            </div>
+          </form>
+        </div>
+        <div class="card">
+          <h2 class="card__title">Parole employés → revenu net</h2>
+          <p>Estimation des retenues (fédéral, provincial, RPC, AE, RRQ) pour voir le <strong>net à payer</strong> et le coût employeur.</p>
+        </div>
+      </div>
+      <div class="card">
+        <h2 class="card__title">Tableau de paie</h2>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Employé</th>
+              <th>Rôle</th>
+              <th>Brut</th>
+              <th>Retenues</th>
+              <th>Net</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="payroll-table-body"></tbody>
+        </table>
+        <div id="payroll-totals"></div>
+      </div>
+    </section>
+
+    <section id="panel-rapports" class="panel">
+      <div class="card">
+        <h2 class="card__title">Rapports journalier &amp; mensuel</h2>
+        <div class="field-row">
+          <div>
+            <label for="report-period">Période</label>
+            <select id="report-period">
+              <option value="jour">Journalier (aujourd'hui)</option>
+              <option value="mois" selected>Mensuel</option>
+              <option value="annee">Annuel (YTD)</option>
+            </select>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button type="button" class="btn btn--primary" id="btn-export-json">Exporter JSON</button>
+          <button type="button" class="btn btn--secondary" id="btn-export-md">Exporter Markdown</button>
+        </div>
+        <h3>Aperçu Markdown</h3>
+        <pre class="report-preview" id="report-preview"></pre>
+      </div>
+    </section>
+
+    <section id="panel-parametres" class="panel">
+      <div class="card">
+        <h2 class="card__title">Entreprise</h2>
+        <form id="form-profile">
+          <label for="prof-name">Nom du business</label>
+          <input type="text" id="prof-name" required value="Manoue Bar" />
+          <label for="prof-seller">Nom du vendeur (par défaut sur les reçus)</label>
+          <input type="text" id="prof-seller" placeholder="Ex. Jean Tremblay" />
+          <label for="prof-address">Adresse (sur le reçu)</label>
+          <input type="text" id="prof-address" placeholder="123 rue Principale, Montréal" />
+          <label for="prof-phone">Téléphone (sur le reçu)</label>
+          <input type="text" id="prof-phone" placeholder="514 555-1234" />
+          <button type="submit" class="btn btn--primary">Enregistrer</button>
+        </form>
+      </div>
+      <div class="card">
+        <h2 class="card__title">Sauvegarde</h2>
+        <div class="btn-row">
+          <button type="button" class="btn btn--secondary" id="btn-import">Importer JSON</button>
+          <button type="button" class="btn btn--ghost" data-action="charger-demo">Charger démo</button>
+          <button type="button" class="btn btn--ghost" id="btn-sync-catalog">Nettoyer produits obsolètes</button>
+          <button type="button" class="btn btn--ghost" id="btn-reset-all">Remettre tout à zéro</button>
+          <input type="file" id="import-file" accept=".json" hidden />
+        </div>
+        <div id="reset-status"></div>
+        <p class="hint">Les données restent sur cet appareil (localStorage). Exportez régulièrement vos rapports JSON.</p>
+      </div>
+    </section>
+
+    <section id="panel-aide" class="panel">
+      <div class="card help-intro">
+        <h2 class="card__title">Guide du propriétaire — Manoue Bar</h2>
+        <p>Choisissez un des 13 sujets ci-dessous — les instructions détaillées s'affichent une à la fois.</p>
+        <p class="hint">Bar · repas du dimanche (Soupe giromon) · boissons · gourdes (HTG) · sans taxe sur les ventes.</p>
+      </div>
+      <div class="card help-body">
+        <div id="help-content" class="help-content" aria-live="polite"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/bundle.js"></script>
+</body>
+</html>

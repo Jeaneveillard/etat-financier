@@ -1,0 +1,59 @@
+═══════════════════════════════════════
+  MANOUE BAR — État financier
+═══════════════════════════════════════
+
+  Double-cliquez : Lancer Etat financier.bat
+  (recommandé sur téléphone — ouvre via le navigateur)
+
+  Compatible téléphone et tablette (Android, iPhone).
+  Utilisez le navigateur (Chrome, Safari) — pas besoin d'installer d'app.
+
+  Haïti — pas de taxe sur les ventes.
+  Chaque dimanche : repas — Soupe giromon (Soup jounou).
+  Autres jours : vente de boissons au bar.
+  Devise : gourdes (HTG).
+
+  Gardez le dossier complet (html + dossier js).
+
+───────────────────────────────────────
+Produits — ajouter, modifier, effacer
+───────────────────────────────────────
+Le responsable gère la liste des produits :
+
+  • Reçus / Ventes → bloc « Gestion des produits »
+    (formulaire + tableau Modif. / Suppr.)
+  • Produits / Stock → formulaire complet + inventaire
+
+  Ajouter : nom + unité de vente (+ options achat stock)
+  Modifier : bouton Modif. (Reçus ou Stock)
+  Effacer : bouton Suppr. — retire le produit partout
+    (listes, stock, ventes et achats liés)
+
+Boissons par défaut : Coca-Cola, Malta H, 7UP, Aloe,
+Kinanm, Gatorade, Eau, Extrait de malt, Soupe giromon.
+
+N.B. — Connexion automatique stock ↔ finances :
+  • Achats marchandise : Produits/Stock → Achat + montant
+    → stock + sortie Opérations (obligatoire, liés)
+  • Ventes : Reçus / Ventes → panier → **Payer** (obligatoire)
+    Reçu papier au client : optionnel
+    Cash : sortie stock + rentrée | Prêt : stock seul, Encaisser plus tard
+  • Modifier un achat : Produits/Stock → Modif. (stock + sortie)
+  • Supprimer : enlève stock ET sortie (ou l'inverse)
+  • Alertes tableau de bord si écart
+
+───────────────────────────────────────
+Menu principal
+───────────────────────────────────────
+Reçus / Ventes  → panier puis bouton Payer (reçu client optionnel)
+Clients en prêt → dettes, bouton Encaisser
+Produits/Stock  → inventaire et achats fournisseur
+Opérations      → rentrées / sorties en gourdes
+Paie / Rapports / Paramètres / Aide (guide complet)
+
+Paramètres → « Remettre tout à zéro » : efface historique et soldes (champs numériques à 0).
+
+« Charger démo » → exemple Manoue Bar avec vente démo.
+
+Après modification des fichiers js/*.js :
+  powershell -File build-bundle.ps1
