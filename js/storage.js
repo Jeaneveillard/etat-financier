@@ -181,6 +181,9 @@ export function saveState(state) {
   state.updatedAt = new Date().toISOString();
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    if (typeof pushToCloud === 'function') {
+      pushToCloud(state);
+    }
   } catch (err) {
     console.error('Erreur lors de la sauvegarde :', err);
     alert('Erreur: impossible de sauvegarder les données. Le stockage local est peut-être plein ou bloqué.');

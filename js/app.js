@@ -91,6 +91,14 @@ function on(id, event, handler) {
 
 function init() {
   try {
+    if (typeof initFirebaseSync === 'function') {
+      initFirebaseSync();
+      listenToCloud(state.updatedAt, (cloudState) => {
+        localStorage.setItem('etat_financier_v1', JSON.stringify(cloudState));
+        location.reload(); // Recharger pour appliquer le nouvel état
+      });
+    }
+
     bindTabs();
     bindForms();
     renderHelpContent(document.getElementById('help-content'));

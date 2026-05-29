@@ -3,6 +3,7 @@ $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 $js = Join-Path $root 'js'
 $order = @(
+  'firebase-sync.js',
   'storage.js',
   'validate.js',
   'reports.js',
