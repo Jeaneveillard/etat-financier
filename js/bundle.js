@@ -9,6 +9,8 @@ const firebaseConfig = {
 };
 
 let db = null;
+let syncPassword = null;
+let isCloudReady = false;
 
 function initFirebaseSync() {
   if (typeof firebase === 'undefined') {
@@ -24,36 +26,57 @@ function initFirebaseSync() {
 
   // Activer le mode hors-ligne
   db.enablePersistence().catch((err) => {
-    if (err.code == 'failed-precondition') {
-      console.warn("Multiple tabs open, persistence can only be enabled in one tab at a time.");
-    } else if (err.code == 'unimplemented') {
-      console.warn("The current browser does not support offline persistence.");
-    }
+    console.warn("[Firebase] Persistance hors ligne non disponible :", err.code);
   });
+
+  // Gestion du mot de passe de sécurité
+  syncPassword = localStorage.getItem('etat_financier_sync_pwd');
+  if (!syncPassword) {
+    syncPassword = prompt("Veuillez entrer le mot de passe de synchronisation pour sécuriser l'accès :");
+    if (syncPassword) {
+      localStorage.setItem('etat_financier_sync_pwd', syncPassword);
+    } else {
+      alert("Sans mot de passe, la synchronisation avec Haïti ne fonctionnera pas.");
+    }
+  }
 }
 
 /**
  * Pousse l'état local complet vers le Cloud Firebase.
  */
 async function pushToCloud(state) {
-  if (!db || !state || !state.updatedAt) return;
+  if (!db || !state || !state.updatedAt || !syncPassword) return;
+  if (!isCloudReady) {
+    console.log("[Firebase] Ignoré : Le cloud n'est pas encore prêt (pour éviter d'écraser les données).");
+    return;
+  }
   try {
-    const docRef = db.collection("appData").doc("state");
+    const docRef = db.collection("appData").doc(syncPassword);
     await docRef.set(state);
     console.log("[Firebase] État poussé vers le Cloud avec succès.");
   } catch (err) {
-    console.error("[Firebase] Erreur lors de la synchronisation :", err);
+    console.error("[Firebase] Erreur lors de la synchronisation (vérifiez le mot de passe) :", err);
   }
 }
 
 /**
  * Écoute les changements provenant du Cloud.
  */
-function listenToCloud(currentLocalUpdatedAt, onCloudUpdate) {
-  if (!db) return;
+function listenToCloud(currentLocalUpdatedAt, onCloudUpdate, onCloudReady) {
+  if (!db || !syncPassword) {
+    if (onCloudReady) onCloudReady();
+    return;
+  }
   
-  const docRef = db.collection("appData").doc("state");
+  const docRef = db.collection("appData").doc(syncPassword);
+  
   docRef.onSnapshot((docSnap) => {
+    // La première fois que ça répond (depuis le cache ou le serveur), on débloque l'application.
+    if (!isCloudReady) {
+      isCloudReady = true;
+      if (onCloudReady) onCloudReady();
+    }
+
     if (docSnap.exists) {
       const cloudState = docSnap.data();
       const cloudDate = new Date(cloudState.updatedAt || 0).getTime();
@@ -63,6 +86,13 @@ function listenToCloud(currentLocalUpdatedAt, onCloudUpdate) {
         console.log("[Firebase] Mise à jour Cloud détectée. Application...");
         onCloudUpdate(cloudState);
       }
+    }
+  }, (error) => {
+    console.error("[Firebase] Accès refusé. Le mot de passe est probablement incorrect.", error);
+    if (!isCloudReady) {
+      isCloudReady = true;
+      if (onCloudReady) onCloudReady(); // On débloque quand même l'app, même en cas d'erreur de mot de passe
+      alert("Erreur de synchronisation : Mot de passe incorrect ou accès refusé. Effacez les données de navigation pour réessayer.");
     }
   });
 }
@@ -2210,11 +2240,23 @@ function on(id, event, handler) {
 function init() {
   try {
     if (typeof initFirebaseSync === 'function') {
+      // Bloquer l'interface pendant la vérification du Cloud
+      document.body.style.opacity = '0.5';
+      document.body.style.pointerEvents = 'none';
+      
       initFirebaseSync();
-      listenToCloud(state.updatedAt, (cloudState) => {
-        localStorage.setItem('etat_financier_v1', JSON.stringify(cloudState));
-        location.reload(); // Recharger pour appliquer le nouvel état
-      });
+      listenToCloud(
+        state.updatedAt,
+        (cloudState) => {
+          localStorage.setItem('etat_financier_v1', JSON.stringify(cloudState));
+          location.reload(); // Recharger pour appliquer le nouvel état
+        },
+        () => {
+          // Débloquer l'interface quand le Cloud est prêt (ou a échoué)
+          document.body.style.opacity = '1';
+          document.body.style.pointerEvents = 'auto';
+        }
+      );
     }
 
     bindTabs();

@@ -92,11 +92,23 @@ function on(id, event, handler) {
 function init() {
   try {
     if (typeof initFirebaseSync === 'function') {
+      // Bloquer l'interface pendant la vérification du Cloud
+      document.body.style.opacity = '0.5';
+      document.body.style.pointerEvents = 'none';
+      
       initFirebaseSync();
-      listenToCloud(state.updatedAt, (cloudState) => {
-        localStorage.setItem('etat_financier_v1', JSON.stringify(cloudState));
-        location.reload(); // Recharger pour appliquer le nouvel état
-      });
+      listenToCloud(
+        state.updatedAt,
+        (cloudState) => {
+          localStorage.setItem('etat_financier_v1', JSON.stringify(cloudState));
+          location.reload(); // Recharger pour appliquer le nouvel état
+        },
+        () => {
+          // Débloquer l'interface quand le Cloud est prêt (ou a échoué)
+          document.body.style.opacity = '1';
+          document.body.style.pointerEvents = 'auto';
+        }
+      );
     }
 
     bindTabs();
